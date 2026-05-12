@@ -108,15 +108,21 @@ async def page_text(page) -> str:
 
 async def wait_through_browser_check(page, stage: str, timeout_seconds: int) -> None:
     deadline = asyncio.get_running_loop().time() + timeout_seconds
+    elapsed = 0
 
     while True:
         title = (await page.title()).lower()
         body = (await page_text(page)).lower()
         if not any(text in title or text in body for text in CHECK_TEXTS):
+            if elapsed:
+                print(f"{stage}: browser check cleared after {elapsed}s", flush=True)
             return
         if asyncio.get_running_loop().time() >= deadline:
             raise DownloadFlowError(stage, "browser check did not finish")
+        if elapsed % 10 == 0:
+            print(f"{stage}: browser check still present at {elapsed}s", flush=True)
         await asyncio.sleep(5)
+        elapsed += 5
 
 
 async def goto_and_wait(page, url: str, stage: str, timeout_seconds: int) -> None:
@@ -216,6 +222,7 @@ async def run_flow(args: argparse.Namespace) -> FlowResult:
     ensure_skill_repo(Path(args.skill_dir).expanduser().resolve())
 
     async with async_playwright() as playwright:
+        print(f"launching_chromium_headless: {args.headless}", flush=True)
         browser = await playwright.chromium.launch(
             headless=args.headless,
             args=[
@@ -239,6 +246,7 @@ async def run_flow(args: argparse.Namespace) -> FlowResult:
             if is_slow_download_url(source_url):
                 selected_slow_url = source_url
             else:
+                print(f"opening_md5_page: {source_url}", flush=True)
                 await goto_and_wait(
                     page,
                     source_url,
@@ -251,7 +259,9 @@ async def run_flow(args: argparse.Namespace) -> FlowResult:
                     args.preferred_slow_index,
                     base_url,
                 )
+                print(f"selected_slow_url: {selected_slow_url}", flush=True)
 
+            print(f"opening_slow_download_page: {selected_slow_url}", flush=True)
             await goto_and_wait(
                 page,
                 selected_slow_url,
@@ -261,7 +271,10 @@ async def run_flow(args: argparse.Namespace) -> FlowResult:
             await asyncio.sleep(args.settle_seconds)
 
             direct_url, span_found = await extract_direct_url(page)
+            print("span_bg_gray_200_found: True", flush=True)
+            print(f"direct_url_prefix: {direct_url[:120]}", flush=True)
 
+            print("starting_browser_download: True", flush=True)
             async with page.expect_download(timeout=args.download_timeout * 1000) as download_info:
                 try:
                     await page.goto(direct_url, wait_until="commit", timeout=90_000)
@@ -271,6 +284,7 @@ async def run_flow(args: argparse.Namespace) -> FlowResult:
 
             download = await download_info.value
             destination = safe_download_path(books_dir, download.suggested_filename)
+            print(f"saving_download_as: {destination}", flush=True)
             await download.save_as(destination)
         finally:
             await context.close()

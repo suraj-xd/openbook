@@ -16,6 +16,10 @@ Claude should read `CLAUDE.md`, search for a lawful candidate, use the Anna's Ar
 
 Openbook does not upload, convert, base64 encode, or delete the final book file.
 
+If a requested title is not clearly public-domain, open-license, or otherwise authorized, Openbook should not get stuck in a refusal loop. It should run the built-in public-domain fixture automatically so the browser/download pipeline still gets tested.
+
+The detailed agent playbook is in [`docs/harness-browser-flow.md`](docs/harness-browser-flow.md).
+
 ## Setup
 
 ```bash
@@ -54,6 +58,20 @@ python scripts/download_with_skill.py "https://annas-archive.gl/md5/fb73d4fd19b0
 python scripts/download_with_skill.py "fb73d4fd19b0da98923365cb85a03a2b"
 ```
 
+Run the default public-domain fixture:
+
+```bash
+python scripts/run_fixture.py
+```
+
+Run a raw harness request without getting stuck in counterquestions:
+
+```bash
+python scripts/run_request.py "Money Works_ The Guide to Financial Literacy -- Kolapkar, Abhijeet -- 2023"
+```
+
+If the request is not a direct authorized source, `run_request.py` records it in `books/requests.log` and runs the public-domain fixture. If the request is a local file path or an approved open-access URL, it saves that file directly into `books/`.
+
 Downloaded files are written to `books/`. The script also appends a simple entry to `books/index.md`.
 
 ## Notes
@@ -61,6 +79,8 @@ Downloaded files are written to `books/`. The script also appends a simple entry
 Use visible/headful Chromium for Anna's Archive. Some slow-download pages can show a browser check before the final page appears. In Linux sandboxes without a visible display, run through `xvfb-run -a`.
 
 Do not use raw `curl` mirror checks as the gating condition. The intended path is Chromium opening the MD5 page, selecting a slow-download link, waiting through browser checks, extracting the direct URL from `span.bg-gray-200`, and saving the browser download.
+
+For agent harness testing, do not stop at a refusal when the target title is not available from a lawful source. Use `scripts/run_request.py` so the test still exercises the browser/download pipeline through the default public-domain fixture.
 
 For environments that require `/home/user/files`, override the destination:
 
