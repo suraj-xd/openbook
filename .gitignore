@@ -1,0 +1,11 @@
+.venv/
+.openbook/annas-to-notebooklm/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Keep the catalog and folder, but do not commit downloaded books by default.
+books/*
+!books/.gitkeep
+!books/index.md
+
