@@ -14,6 +14,8 @@ Pride and Prejudice by Jane Austen
 
 Claude should read `CLAUDE.md`, search for a lawful candidate, use the Anna's Archive automation flow from `annas-to-notebooklm`, skip NotebookLM entirely, and save the downloaded file into `books/`.
 
+Openbook does not upload, convert, base64 encode, or delete the final book file.
+
 ## Setup
 
 ```bash
@@ -45,9 +47,23 @@ Download from an already selected Anna's Archive slow-download URL:
 python scripts/download_with_skill.py "https://annas-archive.gl/slow_download/fb73d4fd19b0da98923365cb85a03a2b/0/4"
 ```
 
+Or start directly from the MD5 page/hash and let the browser flow choose a slow-download URL:
+
+```bash
+python scripts/download_with_skill.py "https://annas-archive.gl/md5/fb73d4fd19b0da98923365cb85a03a2b"
+python scripts/download_with_skill.py "fb73d4fd19b0da98923365cb85a03a2b"
+```
+
 Downloaded files are written to `books/`. The script also appends a simple entry to `books/index.md`.
 
 ## Notes
 
-Use visible/headful Chromium for Anna's Archive. Some slow-download pages can show a browser check before the final page appears.
+Use visible/headful Chromium for Anna's Archive. Some slow-download pages can show a browser check before the final page appears. In Linux sandboxes without a visible display, run through `xvfb-run -a`.
 
+Do not use raw `curl` mirror checks as the gating condition. The intended path is Chromium opening the MD5 page, selecting a slow-download link, waiting through browser checks, extracting the direct URL from `span.bg-gray-200`, and saving the browser download.
+
+For environments that require `/home/user/files`, override the destination:
+
+```bash
+OPENBOOK_BOOKS_DIR=/home/user/files xvfb-run -a .venv/bin/python scripts/download_with_skill.py "fb73d4fd19b0da98923365cb85a03a2b"
+```
